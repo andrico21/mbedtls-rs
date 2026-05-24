@@ -25,6 +25,7 @@ nohook-exp-mod = ["mbedtls-rs-sys/nohook-exp-mod"]
 accel-esp32 = ["mbedtls-rs-sys/accel-esp32"]
 accel-esp32c2 = ["mbedtls-rs-sys/accel-esp32c2"]
 accel-esp32c3 = ["mbedtls-rs-sys/accel-esp32c3"]
+accel-esp32c5 = ["mbedtls-rs-sys/accel-esp32c5"]
 accel-esp32c6 = ["mbedtls-rs-sys/accel-esp32c6"]
 accel-esp32h2 = ["mbedtls-rs-sys/accel-esp32h2"]
 accel-esp32s2 = ["mbedtls-rs-sys/accel-esp32s2"]
@@ -40,3 +41,5 @@ enumset = { version = "1", default-features = false }
 rand_core = "0.9"
 critical-section = "1"
 edge-nal = { version = "0.6", optional = true }
+
+

@@ -98,6 +98,13 @@ fn main() -> Result<()> {
         );
 
         println!("cargo::rustc-link-search={}", libs_dir.display());
+    // Multi-config generators may place libs in a config subdirectory
+    for subdir in ["Release", "Debug", "MinSizeRel", "RelWithDebInfo"] {
+        let sub = libs_dir.join(subdir);
+        if sub.exists() {
+            println!("cargo::rustc-link-search={}", sub.display());
+        }
+    }
 
         for entry in std::fs::read_dir(libs_dir)? {
             let entry = entry?;

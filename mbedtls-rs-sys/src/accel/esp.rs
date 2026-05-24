@@ -4,11 +4,11 @@ pub mod digest;
 #[cfg(not(any(feature = "accel-esp32c2", feature = "nohook-exp-mod")))]
 pub mod exp_mod;
 
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha1")))]
 pub static SHA1: digest::EspSha1 = digest::EspSha1::new();
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha256")))]
 pub static SHA224: digest::EspSha224 = digest::EspSha224::new();
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha256")))]
 pub static SHA256: digest::EspSha256 = digest::EspSha256::new();
 #[cfg(any(feature = "accel-esp32s2", feature = "accel-esp32s3"))]
 pub static SHA384: digest::EspSha384 = digest::EspSha384::new();

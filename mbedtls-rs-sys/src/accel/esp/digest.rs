@@ -4,19 +4,19 @@
 ///
 /// Essentially, a specialization of the `RustCryptoDigest` MbedTLS hook
 /// for the `esp-hal`-specific hardware accelerated sha1 impl that implements the RustCrypto `Digest` trait.
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha1")))]
 pub type EspSha1 = crate::hook::digest::RustCryptoDigest<esp_hal::sha::Sha1Context>;
 /// SHA-224 digest implementation using ESP32 hardware acceleration.
 ///
 /// Essentially, a specialization of the `RustCryptoDigest` MbedTLS hook
 /// for the `esp-hal`-specific hardware accelerated sha224 impl that implements the RustCrypto `Digest` trait.
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha256")))]
 pub type EspSha224 = crate::hook::digest::RustCryptoDigest<esp_hal::sha::Sha224Context>;
 /// SHA-256 digest implementation using ESP32 hardware acceleration.
 ///
 /// Essentially, a specialization of the `RustCryptoDigest` MbedTLS hook
 /// for the `esp-hal`-specific hardware accelerated sha256 impl that implements the RustCrypto `Digest` trait.
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha256")))]
 pub type EspSha256 = crate::hook::digest::RustCryptoDigest<esp_hal::sha::Sha256Context>;
 /// SHA-384 digest implementation using ESP32 hardware acceleration.
 ///
@@ -31,11 +31,11 @@ pub type EspSha384 = crate::hook::digest::RustCryptoDigest<esp_hal::sha::Sha384C
 #[cfg(any(feature = "accel-esp32s2", feature = "accel-esp32s3"))]
 pub type EspSha512 = crate::hook::digest::RustCryptoDigest<esp_hal::sha::Sha512Context>;
 
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha1")))]
 impl crate::hook::digest::MbedtlsSha1 for EspSha1 {}
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha256")))]
 impl crate::hook::digest::MbedtlsSha224 for EspSha224 {}
-#[cfg(not(feature = "accel-esp32"))]
+#[cfg(not(any(feature = "accel-esp32", feature = "nohook-sha256")))]
 impl crate::hook::digest::MbedtlsSha256 for EspSha256 {}
 #[cfg(any(feature = "accel-esp32s2", feature = "accel-esp32s3"))]
 impl crate::hook::digest::MbedtlsSha384 for EspSha384 {}

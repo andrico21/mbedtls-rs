@@ -405,7 +405,13 @@ impl CMakeConfigurer {
             config
                 .define("CMAKE_ARCHIVE_OUTPUT_DIRECTORY", target_dir)
                 .define("CMAKE_LIBRARY_OUTPUT_DIRECTORY", target_dir)
-                .define("CMAKE_RUNTIME_OUTPUT_DIRECTORY", target_dir);
+                .define("CMAKE_RUNTIME_OUTPUT_DIRECTORY", target_dir)
+                // Multi-config generators (Visual Studio, Xcode) ignore the
+                // base output dirs and use per-config variants instead.
+                .define("CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE", target_dir)
+                .define("CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL", target_dir)
+                .define("CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG", target_dir)
+                .define("CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO", target_dir);
         }
 
         if let Some((compiler, _)) = self.derive_forced_c_compiler() {
@@ -469,15 +475,48 @@ impl CMakeConfigurer {
         let (compiler, gnu) = unforce_clang.derive_c_compiler();
 
         if gnu {
-            let output = Command::new(compiler).arg("-print-sysroot").output().ok()?;
+            let output = Command::new(&compiler).arg("-print-sysroot").output().ok()?;
 
             if output.status.success() {
                 let sysroot = String::from_utf8(output.stdout).ok()?.trim().to_string();
 
-                (!sysroot.is_empty()).then_some(PathBuf::from(sysroot))
-            } else {
-                None
+                if !sysroot.is_empty() {
+                    return Some(PathBuf::from(sysroot));
+                }
             }
+
+            // Fallback: some GCC toolchains (e.g. PlatformIO riscv32-esp-elf)
+            // return an empty sysroot.  Locate it relative to the compiler
+            // binary: <prefix>/bin/<triple>-gcc -> <prefix>/<triple>/
+            let resolved = Command::new(&compiler)
+                .arg("-print-search-dirs")
+                .output()
+                .ok()
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+                .and_then(|s| {
+                    // "install: /path/to/lib/gcc/<triple>/version/"
+                    s.lines()
+                        .find(|l| l.starts_with("install:"))
+                        .map(|l| PathBuf::from(l.trim_start_matches("install:").trim()))
+                });
+            if let Some(install_dir) = resolved {
+                // install_dir = <prefix>/lib/gcc/<triple>/<ver>/
+                // Walk up to <prefix>
+                if let Some(prefix) = install_dir.parent()  // <ver>
+                    .and_then(|p| p.parent())               // <triple>
+                    .and_then(|p| p.parent())               // gcc
+                    .and_then(|p| p.parent())               // lib
+                {
+                    let name = compiler.file_name().unwrap_or_default().to_string_lossy();
+                    let triple = name.trim_end_matches(".exe").trim_end_matches("-gcc");
+                    let candidate = prefix.join(triple);
+                    if candidate.join("include").join("stdio.h").exists() {
+                        return Some(candidate);
+                    }
+                }
+            }
+
+            None
         } else {
             None
         }

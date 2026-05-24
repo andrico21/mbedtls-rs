@@ -22,7 +22,7 @@ use crate::sys::{
     mbedtls_x509_crt_free, mbedtls_x509_crt_init,
 };
 
-use rand_core::CryptoRng;
+use rand_core::{CryptoRng, Rng as _};
 
 pub use cert::*;
 #[cfg(feature = "edge-nal")]

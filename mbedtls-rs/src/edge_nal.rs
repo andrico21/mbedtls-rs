@@ -148,8 +148,21 @@ where
     where
         Self: 'a;
 
+    // F-12: this impl is required by edge_nal's `TcpConnect::Socket: TcpSplit`
+    // bound, but TLS sessions cannot be safely split at the edge_nal level (the
+    // cipher state would be aliased across halves). `TcpSplit::split` is sync
+    // and infallible (`(Self::Read<'_>, Self::Write<'_>)`), so we can neither
+    // return an error nor route through the async `Session::split`. The honest
+    // fix is to drop this impl, but that requires refactoring `TlsAcceptor` /
+    // `TlsConnector` to no longer require `TcpSplit` on their `Socket` types -
+    // an upstream `edge-nal` API change. Tracked as F-12 follow-up. Users
+    // wanting to split a TLS session must use the native [`Session::split`].
+    #[expect(
+        clippy::panic,
+        reason = "F-12: edge_nal's TcpSplit::split is infallible and TLS halves can't be aliased; use the native Session::split"
+    )]
     fn split(&mut self) -> (Self::Read<'_>, Self::Write<'_>) {
-        panic!("Splitting a TLS session is not supported yet");
+        panic!("Splitting a TLS session via edge_nal::TcpSplit is not supported; use the native `Session::split` instead");
     }
 }
 

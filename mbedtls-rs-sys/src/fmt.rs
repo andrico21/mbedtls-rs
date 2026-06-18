@@ -2,7 +2,7 @@
 //!
 //! The module also defines:
 //! - Custom versions of the core assert macros (`assert!`, `assert_eq!`, etc.) that use the `defmt` macros if the `defmt` feature is enabled.
-//! - Custom versions of the `panic!`, `todo!`, and `unreachable!` macros that use the `defmt` macros if the `defmt` feature is enabled.
+//! - A custom version of the `unreachable!` macro that uses the `defmt` macros if the `defmt` feature is enabled.
 //! - A custom `unwrap!` macro that uses the `defmt` macros if the `defmt` feature is enabled, otherwise it uses the standard library's `unwrap` method.
 //! - A custom `Bytes` struct that formats byte slices as hex in a way compatible with `defmt`.
 #![macro_use]
@@ -83,18 +83,6 @@ macro_rules! debug_assert_ne {
 }
 
 #[collapse_debuginfo(yes)]
-macro_rules! todo {
-    ($($x:tt)*) => {
-        {
-            #[cfg(not(feature = "defmt"))]
-            ::core::todo!($($x)*);
-            #[cfg(feature = "defmt")]
-            ::defmt::todo!($($x)*);
-        }
-    };
-}
-
-#[collapse_debuginfo(yes)]
 macro_rules! unreachable {
     ($($x:tt)*) => {
         {
@@ -102,18 +90,6 @@ macro_rules! unreachable {
             ::core::unreachable!($($x)*);
             #[cfg(feature = "defmt")]
             ::defmt::unreachable!($($x)*);
-        }
-    };
-}
-
-#[collapse_debuginfo(yes)]
-macro_rules! panic {
-    ($($x:tt)*) => {
-        {
-            #[cfg(not(feature = "defmt"))]
-            ::core::panic!($($x)*);
-            #[cfg(feature = "defmt")]
-            ::defmt::panic!($($x)*);
         }
     };
 }

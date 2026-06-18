@@ -178,3 +178,6 @@ enumset = { version = "1", default-features = false }
 rand_core = "0.10.1"
 critical-section = "1"
 edge-nal = { version = "0.6", optional = true }
+
+[lints]
+workspace = true

@@ -1,3 +1,10 @@
+// This module documents FFI-boundary invariants via `.expect("INVARIANT: ...")`
+// in the MbedTLS BIO callbacks (raw context pointers are set by `call_mbedtls`
+// immediately before MbedTLS invokes the callback, so they are non-null by
+// construction). Allow `expect_used` at module level so the workspace warn
+// doesn't flag these; future `.expect()` here must follow the same pattern.
+#![allow(clippy::expect_used)]
+
 use core::ffi::{c_int, c_uchar, c_void, CStr};
 
 use io::{Error, ErrorKind, ErrorType, Read, Write};
@@ -378,14 +385,18 @@ where
 
     /// The raw MbedTLS BIO receive callback
     unsafe extern "C" fn raw_receive(ctx: *mut c_void, buf: *mut c_uchar, len: usize) -> c_int {
-        let session = (ctx as *mut Self).as_mut().unwrap();
+        let session = (ctx as *mut Self)
+            .as_mut()
+            .expect("INVARIANT: MbedTLS BIO receive ctx is the non-null Session pointer set by call_mbedtls");
 
         session.bio_receive(core::slice::from_raw_parts_mut(buf as *mut _, len))
     }
 
     /// The raw MbedTLS BIO send callback
     unsafe extern "C" fn raw_send(ctx: *mut c_void, buf: *const c_uchar, len: usize) -> c_int {
-        let session = (ctx as *mut Self).as_mut().unwrap();
+        let session = (ctx as *mut Self).as_mut().expect(
+            "INVARIANT: MbedTLS BIO send ctx is the non-null Session pointer set by call_mbedtls",
+        );
 
         session.bio_send(core::slice::from_raw_parts(buf as *const _, len))
     }

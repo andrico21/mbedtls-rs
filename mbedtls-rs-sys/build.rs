@@ -1,3 +1,10 @@
+// Build script: panics surface as build failures to the developer running
+// `cargo build`, not as runtime crashes in deployed code, so unwrap/panic are
+// acceptable here. Allowing them avoids spamming the build script with
+// defensive `.expect("...")` calls that add no diagnostic signal beyond the
+// panic location itself.
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use anyhow::Result;
 use std::{env, path::PathBuf};
 

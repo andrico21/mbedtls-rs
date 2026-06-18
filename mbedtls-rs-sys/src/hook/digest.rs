@@ -1,5 +1,14 @@
 //! Hooking for MbedTLS Digest algorithms
 
+// This module documents FFI-boundary invariants via `.expect("INVARIANT: ...")`
+// at sites where the MbedTLS C contract guarantees the precondition (e.g.
+// non-null context pointers on `_init`/`_starts`/`_update`/`_finish`/`_clone`,
+// or `Some` digest state between `_starts` and `_finish`). Allow `expect_used`
+// at module level so the workspace-wide warn doesn't flag these documented
+// invariants; future `.expect()` in this module must follow the same
+// "INVARIANT: ..." pattern.
+#![allow(clippy::expect_used)]
+
 use core::ffi::{c_int, c_uchar};
 use core::marker::PhantomData;
 use core::ops::Deref;
@@ -148,7 +157,9 @@ where
 
     fn update(&self, memory: &mut WorkAreaMemory, data: &[u8]) {
         Digest::update(
-            unsafe { memory.cast_mut::<Option<T>>() }.as_mut().unwrap(),
+            unsafe { memory.cast_mut::<Option<T>>() }
+                .as_mut()
+                .expect("INVARIANT: digest state is Some after mbedtls_*_starts and before mbedtls_*_finish"),
             data,
         );
     }
@@ -157,7 +168,9 @@ where
         output.copy_from_slice(
             &unsafe { memory.cast_mut::<Option<T>>() }
                 .take()
-                .unwrap()
+                .expect(
+                    "INVARIANT: digest state is Some when mbedtls_*_finish is called after starts",
+                )
                 .finalize(),
         );
     }
@@ -170,13 +183,31 @@ where
 #[allow(unused)]
 #[inline(always)]
 unsafe fn digest_init<T: WorkArea>(algo: &dyn MbedtlsDigest, memory: *mut T) {
-    algo.init(memory.as_mut().unwrap().memory_mut());
+    algo.init(
+        memory
+            .as_mut()
+            .expect("INVARIANT: MbedTLS *_init ctx must be non-null")
+            .memory_mut(),
+    );
 }
 
 #[allow(unused)]
 #[inline(always)]
 unsafe fn digest_free<T: WorkArea>(algo: &dyn MbedtlsDigest, memory: *mut T) {
-    algo.free(memory.as_mut().unwrap().memory_mut());
+    // MbedTLS upstream contract: `mbedtls_*_free(NULL)` is explicitly documented
+    // as valid (sha1.h:76-82, sha256.h, sha512.h: "ctx ... may be NULL, in which
+    // case this function returns immediately"). No current caller in MbedTLS 3.x
+    // actually passes NULL: `mbedtls_md_free` (md.c:282) NULL-checks `ctx->md_ctx`
+    // before dispatch, PSA hash code passes `&operation->ctx` (struct field), and
+    // the SHA self-tests pass `&ctx` (stack variable). The contract is forward-
+    // compatible / defensive: when our `MBEDTLS_SHA*_ALT` hook replaces the
+    // upstream implementation, any future caller that elects to pass NULL through
+    // would land here, and panicking across the FFI boundary is strictly worse
+    // than the documented no-op.
+    let Some(memory) = memory.as_mut() else {
+        return;
+    };
+    algo.free(memory.memory_mut());
 }
 
 #[allow(unused)]
@@ -187,15 +218,26 @@ unsafe fn digest_clone<T: WorkArea>(
     dst_work_area: *mut T,
 ) {
     algo.clone(
-        src_work_area.as_ref().unwrap().memory(),
-        dst_work_area.as_mut().unwrap().memory_mut(),
+        src_work_area
+            .as_ref()
+            .expect("INVARIANT: MbedTLS *_clone src ctx must be non-null")
+            .memory(),
+        dst_work_area
+            .as_mut()
+            .expect("INVARIANT: MbedTLS *_clone dst ctx must be non-null")
+            .memory_mut(),
     );
 }
 
 #[allow(unused)]
 #[inline(always)]
 unsafe fn digest_starts<T: WorkArea>(algo: &dyn MbedtlsDigest, memory: *mut T) -> c_int {
-    algo.reset(memory.as_mut().unwrap().memory_mut());
+    algo.reset(
+        memory
+            .as_mut()
+            .expect("INVARIANT: MbedTLS *_starts ctx must be non-null")
+            .memory_mut(),
+    );
 
     0
 }
@@ -211,7 +253,13 @@ unsafe fn digest_update<T: WorkArea>(
     if ilen > 0 {
         let data = unsafe { core::slice::from_raw_parts(input, ilen) };
 
-        algo.update(memory.as_mut().unwrap().memory_mut(), data);
+        algo.update(
+            memory
+                .as_mut()
+                .expect("INVARIANT: MbedTLS *_update ctx must be non-null when ilen > 0")
+                .memory_mut(),
+            data,
+        );
     }
 
     0
@@ -225,10 +273,24 @@ unsafe fn digest_finish<T: WorkArea>(
     output: *mut c_uchar,
 ) -> c_int {
     let output_slice = unsafe {
-        core::slice::from_raw_parts_mut(output, algo.output_size(memory.as_ref().unwrap().memory()))
+        core::slice::from_raw_parts_mut(
+            output,
+            algo.output_size(
+                memory
+                    .as_ref()
+                    .expect("INVARIANT: MbedTLS *_finish ctx must be non-null")
+                    .memory(),
+            ),
+        )
     };
 
-    algo.finish(memory.as_mut().unwrap().memory_mut(), output_slice);
+    algo.finish(
+        memory
+            .as_mut()
+            .expect("INVARIANT: MbedTLS *_finish ctx must be non-null")
+            .memory_mut(),
+        output_slice,
+    );
 
     0
 }

@@ -294,3 +294,6 @@ cmake = "0.1.52"
 cc = "1.1"
 fs_extra = "1.3"
 embuild = "0.33"
+
+[lints]
+workspace = true

@@ -73,6 +73,14 @@ pub trait WorkArea {
         //     core::any::type_name::<T>()
         // );
 
+        // F-14: `panic!` is allowed here because misfit is only reachable for
+        // oversized *custom* hooks (a programmer error in the hook author's
+        // type sizing). All shipped RustCrypto digest states fit `[u8; 208]` /
+        // `[u8; 304]`. The deeper F-14 fix (return MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED
+        // and add a `const { assert!(size_of::<T>() + align <= WORK_AREA_LEN) }`
+        // helper for hook authors) requires changing this trait's infallible
+        // signature; tracked as a follow-up.
+        #[expect(clippy::panic, reason = "F-14: custom-hook size misfit only")]
         if array.is_empty() {
             panic!(
                 "work area cannot fit target type {}",
@@ -99,6 +107,9 @@ pub trait WorkArea {
         //     core::any::type_name::<T>()
         // );
 
+        // F-14: same justification as in `cast_mut_maybe` above (custom-hook
+        // size misfit only).
+        #[expect(clippy::panic, reason = "F-14: custom-hook size misfit only")]
         if array.is_empty() {
             panic!(
                 "work area cannot fit target type {}",

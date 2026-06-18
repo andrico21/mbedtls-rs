@@ -1,3 +1,10 @@
+// This module documents FFI-boundary invariants via `.expect("INVARIANT: ...")`
+// in the MbedTLS BIO callbacks (raw context pointers are set by `call_mbedtls`
+// immediately before MbedTLS invokes the callback, so they are non-null by
+// construction). Allow `expect_used` at module level so the workspace warn
+// doesn't flag these; future `.expect()` here must follow the same pattern.
+#![allow(clippy::expect_used)]
+
 use core::ffi::{c_int, c_uchar, c_void, CStr};
 use core::future::{poll_fn, Future};
 use core::pin::pin;
@@ -870,10 +877,10 @@ where
 
     /// Write data to the underlying stream without blocking
     fn poll_write(&mut self, ctx: &mut Context<'_>, data: &[u8]) -> Poll<usize> {
-        if self.write_byte.is_some() {
+        if let Some(byte) = *self.write_byte {
             // First, try to send the pending byte from `wait_writable`
 
-            let data = [self.write_byte.unwrap()];
+            let data = [byte];
             let mut fut = pin!(self.stream.write(&data));
 
             if let Poll::Ready(Ok(1)) = fut.as_mut().poll(ctx) {
@@ -916,7 +923,9 @@ where
 
     /// The raw MbedTLS BIO receive callback
     unsafe extern "C" fn raw_receive(ctx: *mut c_void, buf: *mut c_uchar, len: usize) -> c_int {
-        let ctx = (ctx as *mut MBioCallCtx<'_, '_, '_, T>).as_mut().unwrap();
+        let ctx = (ctx as *mut MBioCallCtx<'_, '_, '_, T>).as_mut().expect(
+            "INVARIANT: MbedTLS BIO receive ctx is the non-null MBioCallCtx set by call_mbedtls",
+        );
 
         ctx.io
             .bio_receive(core::slice::from_raw_parts_mut(buf as *mut _, len), ctx.ctx)
@@ -924,7 +933,9 @@ where
 
     /// The raw MbedTLS BIO send callback
     unsafe extern "C" fn raw_send(ctx: *mut c_void, buf: *const c_uchar, len: usize) -> c_int {
-        let ctx = (ctx as *mut MBioCallCtx<'_, '_, '_, T>).as_mut().unwrap();
+        let ctx = (ctx as *mut MBioCallCtx<'_, '_, '_, T>).as_mut().expect(
+            "INVARIANT: MbedTLS BIO send ctx is the non-null MBioCallCtx set by call_mbedtls",
+        );
 
         ctx.io
             .bio_send(core::slice::from_raw_parts(buf as *const _, len), ctx.ctx)

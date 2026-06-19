@@ -46,10 +46,20 @@ jobs:
   build:
     name: Build for host
     runs-on: [self-hosted, Linux, X64, shared]
+    container:
+      image: rust:1.96-trixie
     permissions: read-all
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            cmake ninja-build clang libclang-dev pkg-config \
+            build-essential python3 python3-pip python3-venv \
+            curl unzip git ca-certificates libssl-dev
 
       - name: mbedtls init
         run: git submodule update --init --recursive
@@ -88,6 +98,8 @@ jobs:
   build-mbedtls:
     name: Pre-build MbedTLS native libs
     runs-on: [self-hosted, Linux, X64, shared]
+    container:
+      image: rust:1.96-trixie
     permissions: read-all
     needs: build
     outputs:
@@ -95,6 +107,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            cmake ninja-build clang libclang-dev pkg-config \
+            build-essential python3 python3-pip python3-venv \
+            curl unzip git ca-certificates libssl-dev
 
       - name: mbedtls init
         run: git submodule update --init --recursive
@@ -205,6 +225,8 @@ jobs:
   build-mcu:
     name: Build-MCU
     runs-on: [self-hosted, Linux, X64, shared]
+    container:
+      image: rust:1.96-trixie
     permissions: read-all
     needs: build-mbedtls
     strategy:
@@ -222,6 +244,14 @@ jobs:
 #          - [esp, esp32h2, riscv32imac-unknown-none-elf]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            cmake ninja-build clang libclang-dev pkg-config \
+            build-essential python3 python3-pip python3-venv \
+            curl unzip git ca-certificates libssl-dev
 
       - uses: dtolnay/rust-toolchain@v1
         with:
@@ -289,6 +319,8 @@ jobs:
   build-esp-idf:
     name: Build-ESP-IDF
     runs-on: [self-hosted, Linux, X64, shared]
+    container:
+      image: rust:1.96-trixie
     permissions: read-all
     needs: build-mcu
     strategy:
@@ -305,6 +337,14 @@ jobs:
 #          - [std, esp32h2, riscv32imac-esp-espidf]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            cmake ninja-build clang libclang-dev pkg-config \
+            build-essential python3 python3-pip python3-venv \
+            curl unzip git ca-certificates libssl-dev
 
       - uses: dtolnay/rust-toolchain@v1
         with:
@@ -350,6 +390,8 @@ jobs:
   commit-libs:
     name: Commit pre-built MbedTLS native libs
     runs-on: [self-hosted, Linux, X64, shared]
+    container:
+      image: rust:1.96-trixie
     permissions:
       contents: write
     needs: build-esp-idf

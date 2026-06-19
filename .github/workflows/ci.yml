@@ -45,7 +45,7 @@ concurrency:
 jobs:
   build:
     name: Build for host
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, shared]
     permissions: read-all
 
     steps:
@@ -87,7 +87,7 @@ jobs:
 
   build-mbedtls:
     name: Pre-build MbedTLS native libs
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, shared]
     permissions: read-all
     needs: build
     outputs:
@@ -204,7 +204,7 @@ jobs:
 
   build-mcu:
     name: Build-MCU
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, shared]
     permissions: read-all
     needs: build-mbedtls
     strategy:
@@ -288,7 +288,7 @@ jobs:
 
   build-esp-idf:
     name: Build-ESP-IDF
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, shared]
     permissions: read-all
     needs: build-mcu
     strategy:
@@ -349,7 +349,7 @@ jobs:
   # that has write access to prevent security breaches, and unwanted use of the token
   commit-libs:
     name: Commit pre-built MbedTLS native libs
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, shared]
     permissions:
       contents: write
     needs: build-esp-idf
